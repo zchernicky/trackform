@@ -18,7 +18,7 @@ window.electron.onUpdateStatus((status) => {
 });
 
 document.getElementById('select-file').addEventListener('click', async () => {
-  selectedFilePath = await window.electronAPI.selectMp3();
+  selectedFilePath = await window.electron.selectMp3();
   document.getElementById('file-path').textContent = selectedFilePath || 'No file selected';
 });
 
@@ -34,7 +34,7 @@ document.getElementById('tag-file').addEventListener('click', async () => {
   const genre = document.getElementById('genre').value;
 
   try {
-    const newFilePath = await window.electronAPI.tagMp3(selectedFilePath, { title, artist, year, genre });
+    const newFilePath = await window.electron.tagMp3(selectedFilePath, { title, artist, year, genre });
     document.getElementById('status').textContent = `Tags updated successfully for: ${newFilePath}`;
   } catch (err) {
     document.getElementById('status').textContent = `Error: ${err}`;
