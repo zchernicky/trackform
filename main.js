@@ -1,15 +1,35 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const { log, getFfmpegPath } = require('./scripts/dev-utils');
+const Store = require('electron-store').default;
+
+// Initialize store for preferences
+const store = new Store();
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow;
+let settingsWindow;
+
+function createSettingsWindow() {
+  settingsWindow = new BrowserWindow({
+    width: 500,
+    height: 400,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+    parent: mainWindow,
+    modal: true,
+    resizable: false
+  });
+
+  settingsWindow.loadFile('settings.html');
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,6 +39,71 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+
+  // Create the application menu
+  const template = [
+    {
+      label: 'Trackform',
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { 
+          label: 'Settings',
+          click: () => createSettingsWindow()
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'delete' },
+        { type: 'separator' },
+        { role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { type: 'separator' },
+        { role: 'front' },
+        { type: 'separator' },
+        { role: 'window' }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
   mainWindow.loadFile('index.html');
   
@@ -105,6 +190,27 @@ ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
   log('Input file exists:', fs.existsSync(filePath));
   log('Input file permissions:', fs.statSync(filePath).mode);
 
+  // Check if user has set "always allow"
+  const alwaysAllow = store.get('alwaysAllowOverwrite');
+  
+  if (!alwaysAllow) {
+    // Show confirmation dialog before proceeding
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Confirm File Overwrite',
+      message: 'This will overwrite the original MP3 file. Do you want to continue?',
+      buttons: ['Yes', 'Always Allow', 'No'],
+      defaultId: 2,
+      cancelId: 2
+    });
+
+    if (response === 2) { // No
+      throw new Error('Operation cancelled by user');
+    } else if (response === 1) { // Always Allow
+      store.set('alwaysAllowOverwrite', true);
+    }
+  }
+
   // Create a temporary file path
   const tempFilePath = `${filePath}.temp`;
   
@@ -165,4 +271,18 @@ ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
       reject(err);
     });
   });
+});
+
+ipcMain.handle('get-setting', async (_, key) => {
+  return store.get(key);
+});
+
+ipcMain.handle('set-setting', async (_, key, value) => {
+  store.set(key, value);
+});
+
+ipcMain.handle('close-settings', () => {
+  if (settingsWindow) {
+    settingsWindow.close();
+  }
 });
