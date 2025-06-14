@@ -1,0 +1,64 @@
+{
+  "name": "trackform",
+  "version": "0.0.1-alpha",
+  "description": "Trackform is an MP3 metadata toolkit that allows you to embed, tag, and view metadata in MP3 files.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-builder build --mac --arm64",
+    "publish": "electron-builder build --mac --arm64 --publish always",
+    "postinstall": "node scripts/download-ffmpeg.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zchernicky/trackform.git"
+  },
+  "keywords": [
+    "mp3",
+    "metadata",
+    "electron",
+    "audio",
+    "tag",
+    "id3",
+    "music",
+    "trackform"
+  ],
+  "author": "Zach Chernicky",
+  "license": "MIT",
+  "type": "commonjs",
+  "build": {
+    "appId": "com.zachchernicky.trackform",
+    "mac": {
+      "category": "public.app-category.audio",
+      "target": [
+        "dmg"
+      ],
+      "identity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "type": "distribution"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "zchernicky",
+      "repo": "trackform"
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/zchernicky/trackform/issues"
+  },
+  "homepage": "https://github.com/zchernicky/trackform#readme",
+  "devDependencies": {
+    "axios": "^1.6.7",
+    "electron": "^36.4.0",
+    "electron-builder": "^24.9.1",
+    "electron-installer-dmg": "^5.0.1",
+    "electron-packager": "^17.1.2",
+    "extract-zip": "^2.0.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
+}

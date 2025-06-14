@@ -1,0 +1,47 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+
+# Electron build output
+dist/
+build/
+*.asar
+
+# Electron Packager / Forge / Builder outputs
+*.tgz
+*.zip
+*.dmg
+
+# FFmpeg binaries (if downloaded locally)
+ffmpeg
+ffprobe
+*.ffmpeg
+*.ffprobe
+resources/ffmpeg/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+log.txt
+
+# Environment files
+.env
+.env.*
+
+# Optional: Electron auto-update
+*.blockmap
+
+# Additional entries
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Output of 'npm pack'
+*.tgz
