@@ -40,6 +40,12 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "type": "distribution"
     },
+    "extraResources": [
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg"
+      }
+    ],
     "publish": {
       "provider": "github",
       "owner": "zchernicky",

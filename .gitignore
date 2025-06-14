@@ -45,3 +45,6 @@ log.txt
 
 # Output of 'npm pack'
 *.tgz
+
+# Development files
+scripts/dev-utils.js

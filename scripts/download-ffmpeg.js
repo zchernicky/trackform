@@ -5,7 +5,7 @@ const extract = require('extract-zip');
 const { exec } = require('child_process');
 
 const FFMPEG_VERSION = '6.1.1';
-const RESOURCES_DIR = path.join(__dirname, '..', 'resources', 'ffmpeg');
+const RESOURCES_DIR = path.join(__dirname, '..', 'resources');
 
 async function downloadFfmpeg() {
   // Create resources directory if it doesn't exist

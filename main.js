@@ -1,21 +1,13 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
+const { log, getFfmpegPath } = require('./scripts/dev-utils');
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
-
-// Get the path to the bundled ffmpeg
-function getFfmpegPath() {
-  const isDev = process.env.NODE_ENV === 'development';
-  if (isDev) {
-    return '/opt/homebrew/bin/ffmpeg';
-  }
-  return path.join(process.resourcesPath, 'ffmpeg');
-}
 
 let mainWindow;
 
@@ -103,15 +95,74 @@ ipcMain.handle('select-mp3', async () => {
 });
 
 ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
+  log('IPC handler called with:', { filePath, tags });
+  
   const { title, artist, year, genre } = tags;
   const ffmpegPath = getFfmpegPath();
+  
+  log('FFmpeg path:', ffmpegPath);
+  log('File exists:', fs.existsSync(ffmpegPath));
+  log('Input file exists:', fs.existsSync(filePath));
+  log('Input file permissions:', fs.statSync(filePath).mode);
 
-  const cmd = `"${ffmpegPath}" -i "${filePath}" -metadata title="${title}" -metadata artist="${artist}" -metadata date="${year}" -metadata genre="${genre}" -codec copy "${filePath}"`;
+  // Create a temporary file path
+  const tempFilePath = `${filePath}.temp`;
+  
+  const args = [
+    '-loglevel', app.isPackaged ? 'error' : 'debug',
+    '-y',  // Automatically overwrite output files
+    '-i', filePath,
+    '-metadata', `title=${title}`,
+    '-metadata', `artist=${artist}`,
+    '-metadata', `date=${year}`,
+    '-metadata', `genre=${genre}`,
+    '-f', 'mp3',  // Specify output format as MP3
+    '-codec', 'copy',
+    tempFilePath
+  ];
+  
+  log('Executing ffmpeg with args:', args);
 
   return new Promise((resolve, reject) => {
-    exec(cmd, (err, stdout, stderr) => {
-      if (err) reject(stderr);
-      else resolve(filePath);
+    const ffmpeg = spawn(ffmpegPath, args);
+    let stdout = '';
+    let stderr = '';
+
+    ffmpeg.stdout.on('data', (data) => {
+      stdout += data.toString();
+      log('FFmpeg stdout:', data.toString());
+    });
+
+    ffmpeg.stderr.on('data', (data) => {
+      stderr += data.toString();
+      log('FFmpeg stderr:', data.toString());
+    });
+
+    ffmpeg.on('close', async (code) => {
+      log('FFmpeg process exited with code:', code);
+      if (code === 0) {
+        try {
+          // Move the temporary file back to the original location
+          await fs.promises.rename(tempFilePath, filePath);
+          resolve(filePath);
+        } catch (err) {
+          console.error('Error moving file:', err);
+          reject(err);
+        }
+      } else {
+        // Clean up temp file if it exists
+        try {
+          await fs.promises.unlink(tempFilePath);
+        } catch (err) {
+          console.error('Error cleaning up temp file:', err);
+        }
+        reject(`FFmpeg process exited with code ${code}\n${stderr}`);
+      }
+    });
+
+    ffmpeg.on('error', (err) => {
+      console.error('FFmpeg process error:', err);
+      reject(err);
     });
   });
 });

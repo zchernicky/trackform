@@ -33,10 +33,18 @@ document.getElementById('tag-file').addEventListener('click', async () => {
   const year = document.getElementById('year').value;
   const genre = document.getElementById('genre').value;
 
+  console.log('Attempting to tag file:', selectedFilePath);
+  console.log('Tags:', { title, artist, year, genre });
+
   try {
+    console.log('Calling tagMp3...');
     const newFilePath = await window.electron.tagMp3(selectedFilePath, { title, artist, year, genre });
+    console.log('Tag operation successful:', newFilePath);
     document.getElementById('status').textContent = `Tags updated successfully for: ${newFilePath}`;
+    document.getElementById('status').className = 'success';
   } catch (err) {
+    console.error('Error during tagging:', err);
     document.getElementById('status').textContent = `Error: ${err}`;
+    document.getElementById('status').className = 'error';
   }
 });
