@@ -4,10 +4,33 @@ const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const { log, getFfmpegPath } = require('./scripts/dev-utils');
-const Store = require('electron-store').default;
 
-// Initialize store for preferences
-const store = new Store();
+// Initialize settings storage
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+// Load settings from file
+function loadSettings() {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Error loading settings:', err);
+  }
+  return {};
+}
+
+// Save settings to file
+function saveSettings(settings) {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  } catch (err) {
+    console.error('Error saving settings:', err);
+  }
+}
+
+// Initialize settings
+let settings = loadSettings();
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
@@ -177,7 +200,7 @@ ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
   log('Input file permissions:', fs.statSync(filePath).mode);
 
   // Check if user has set "always allow"
-  const alwaysAllow = store.get('alwaysAllowOverwrite');
+  const alwaysAllow = settings.alwaysAllowOverwrite;
   
   if (!alwaysAllow) {
     // Show confirmation dialog before proceeding
@@ -193,7 +216,8 @@ ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
     if (response === 2) { // No
       throw new Error('Operation cancelled by user');
     } else if (response === 1) { // Always Allow
-      store.set('alwaysAllowOverwrite', true);
+      settings.alwaysAllowOverwrite = true;
+      saveSettings(settings);
     }
   }
 
@@ -259,12 +283,13 @@ ipcMain.handle('tag-mp3', async (_, { filePath, tags }) => {
   });
 });
 
-ipcMain.handle('get-setting', async (_, key) => {
-  return store.get(key);
+ipcMain.handle('get-setting', (_, key) => {
+  return settings[key];
 });
 
-ipcMain.handle('set-setting', async (_, key, value) => {
-  store.set(key, value);
+ipcMain.handle('set-setting', (_, key, value) => {
+  settings[key] = value;
+  saveSettings(settings);
 });
 
 ipcMain.handle('close-settings', () => {
